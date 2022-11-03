@@ -1,0 +1,29 @@
+#!/bin/bash
+#Nicholas Ferreira - 11/02/22
+
+user_url="$1"
+
+id_param="data-redirect_paid_url"
+download_url='https://fixthephoto.com/presets/dlp.php?p='
+
+function download(){
+	download_id=`curl -s "$1" | grep data-redirect_paid_url | egrep -o "[a-f0-9]{13}"`
+	filename_header=`curl -sI "${download_url}${download_id}" | grep filename`
+	folder_name=`echo "$filename_header" | sed -E "s/.*=\"[0-9]+_([^ ]+).*/\1/"`
+	file_name=`echo "$filename_header" | sed -E "s/.*=\"([^\"]+)\"/\1/"`
+	echo Downloading "./${folder_name}/${file_name}"
+	wget -q --content-disposition "${download_url}${download_id}" -P "$folder_name"	
+	
+}
+
+# single lut
+if [[ "$user_url" =~ download-[0-9]+$ ]]; then
+	download "$user_url"
+fi
+
+# multiple luts
+download_list=`curl -s "$1" | grep "tm-button tm-button-yellow download-icon  tm-button-nomob uk-text-truncate" | grep -Po '(?<=")[^"]+(?=")' | grep http | grep download`
+
+for url in ${download_list}; do
+	download "$url"
+done
